@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Resala STEM — نظام النزولات</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;700;900&display=swap" rel="stylesheet">
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{
+  --navy:#1a2a5e;--navy2:#0f1a3e;--red:#c0272d;
+  --white:#fff;--cream:#f7f9ff;--gray:#e8ecf5;--gray2:#c8d0e8;
+  --text:#0d1526;--text2:#4a5578;--gold:#f5a623;--green:#1a8a4a;
+  --shadow:0 4px 24px rgba(26,42,94,.10);--shadow-lg:0 8px 40px rgba(26,42,94,.18);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Cairo',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+
+/* ══ LOGIN SCREEN ══ */
+#login-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:linear-gradient(135deg,var(--navy2) 0%,var(--navy) 50%,#2a1a5e 100%);
+  display:flex;align-items:center;justify-content:center;padding:16px;
+}
+#login-screen.hidden{display:none;}
+.login-card{
+  background:#fff;border-radius:24px;padding:40px 36px;
+  width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3);
+  animation:popIn .3s ease;
+}
+.login-logo{text-align:center;margin-bottom:28px;}
+.login-logo h1{font-family:'Tajawal',sans-serif;font-weight:900;font-size:28px;color:var(--navy);}
+.login-logo h1 span{color:var(--red);}
+.login-logo p{font-size:13px;color:var(--text2);margin-top:4px;}
+.login-tabs{display:flex;background:var(--cream);border-radius:10px;padding:4px;margin-bottom:24px;gap:4px;}
+.ltab{flex:1;padding:9px;border-radius:8px;border:none;background:transparent;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--text2);}
+.ltab.active{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(26,42,94,.12);}
+.login-form{display:none;}
+.login-form.active{display:block;}
+.lf-group{margin-bottom:16px;}
+.lf-label{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:5px;display:block;}
+.lf-input{width:100%;padding:12px 14px;border:2px solid var(--gray);border-radius:10px;font-family:'Cairo',sans-serif;font-size:14px;color:var(--text);text-align:right;outline:none;transition:border .2s;}
+.lf-input:focus{border-color:var(--navy);}
+.lf-input.err{border-color:var(--red);}
+.login-btn{width:100%;padding:13px;border-radius:10px;border:none;font-family:'Cairo',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px;}
+.login-btn-admin{background:var(--navy);color:#fff;}
+.login-btn-admin:hover{background:var(--navy2);transform:translateY(-1px);box-shadow:0 4px 16px rgba(26,42,94,.3);}
+.login-btn-viewer{background:var(--cream);color:var(--navy);border:2px solid var(--gray2);}
+.login-btn-viewer:hover{border-color:var(--navy);}
+.login-err{color:var(--red);font-size:12px;font-weight:600;margin-top:8px;text-align:center;min-height:20px;}
+.login-hint{background:var(--cream);border-radius:10px;padding:12px 14px;margin-top:16px;font-size:12px;color:var(--text2);line-height:1.7;border:1px solid var(--gray);}
+.login-hint strong{color:var(--navy);}
+.bg-dots{position:absolute;inset:0;overflow:hidden;pointer-events:none;}
+.bg-dots::before,.bg-dots::after{content:'';position:absolute;border-radius:50%;background:rgba(255,255,255,.04);}
+.bg-dots::before{width:400px;height:400px;top:-100px;right:-100px;}
+.bg-dots::after{width:300px;height:300px;bottom:-80px;left:-80px;}
+
+/* ══ USER BADGE IN NAVBAR ══ */
+.user-badge{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border-radius:8px;padding:5px 12px;cursor:pointer;transition:background .2s;}
+.user-badge:hover{background:rgba(255,255,255,.2);}
+.user-badge .role-icon{font-size:16px;}
+.user-badge .role-name{font-size:12px;font-weight:700;color:#fff;}
+.user-badge .role-tag{font-size:10px;color:rgba(255,255,255,.6);}
+
+/* ══ ADMIN PANEL (settings page) ══ */
+.admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;}
+.admin-card{background:#fff;border-radius:13px;padding:18px;box-shadow:var(--shadow);}
+.admin-card h3{font-weight:700;font-size:14px;color:var(--navy);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+.pw-row{display:flex;gap:8px;margin-bottom:8px;}
+.pw-row input{flex:1;padding:9px 11px;border:2px solid var(--gray);border-radius:8px;font-family:'Cairo',sans-serif;font-size:13px;text-align:right;outline:none;transition:border .2s;background:#fff;}
+.pw-row input:focus{border-color:var(--navy);}
+.user-list-item{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:8px;transition:background .15s;margin-bottom:4px;}
+.user-list-item:hover{background:var(--cream);}
+.user-list-item .uname{font-weight:700;font-size:13px;color:var(--text);}
+.user-list-item .urole{font-size:11px;padding:2px 8px;border-radius:999px;font-weight:700;}
+.urole-admin{background:#eef2ff;color:var(--navy);}
+.urole-viewer{background:#f0fdf4;color:var(--green);}
+
+/* ══ VIEWER NOTICE ══ */
+.viewer-notice{background:linear-gradient(135deg,#eef2ff,#e0e7ff);border:2px solid #c7d2fe;border-radius:12px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--navy);font-weight:600;}
+
+/* ══ MAIN APP ══ */
+#app{display:none;}
+#app.visible{display:block;}
+
+.navbar{background:linear-gradient(135deg,var(--navy2),var(--navy));padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:60px;position:sticky;top:0;z-index:200;box-shadow:0 2px 16px rgba(0,0,0,.3);}
+.brand{font-family:'Tajawal',sans-serif;font-weight:900;font-size:19px;color:#fff;}
+.brand span{color:#e63946;}
+.nav-tabs{display:flex;gap:3px;}
+.ntab{padding:7px 13px;border-radius:8px;cursor:pointer;color:rgba(255,255,255,.6);font-size:13px;font-weight:600;transition:all .2s;border:none;background:transparent;font-family:'Cairo',sans-serif;}
+.ntab:hover{background:rgba(255,255,255,.1);color:#fff;}
+.ntab.active{background:var(--red);color:#fff;}
+.nav-btns{display:flex;gap:6px;}
+
+.btn{display:inline-flex;align-items:center;gap:5px;padding:9px 17px;border-radius:9px;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;white-space:nowrap;}
+.btn:hover{transform:translateY(-1px);}
+.btn-navy{background:var(--navy);color:#fff;}
+.btn-navy:hover{background:var(--navy2);}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{background:#a01e23;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{background:#156c3c;}
+.btn-gold{background:var(--gold);color:#1a1a1a;}
+.btn-gold:hover{background:#d4861a;color:#fff;}
+.btn-outline{background:transparent;color:var(--navy);border:2px solid var(--gray2);}
+.btn-outline:hover{border-color:var(--navy);}
+.btn-danger{background:#fee2e2;color:#b91c1c;border:none;}
+.btn-danger:hover{background:#fecaca;}
+.btn-white{background:#fff;color:var(--navy);}
+.btn-sm{padding:5px 12px;font-size:12px;}
+
+.container{max-width:1020px;margin:0 auto;padding:22px 18px 60px;}
+.page{display:none;}.page.active{display:block;}
+.admin-only{display:none;}
+.is-admin .admin-only{display:inline-flex;}
+.is-admin .admin-only-block{display:block;}
+.admin-only-block{display:none;}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
+.stat-card{background:#fff;border-radius:13px;padding:16px 14px;box-shadow:var(--shadow);text-align:center;border-top:3px solid var(--navy);transition:transform .2s;}
+.stat-card:hover{transform:translateY(-3px);}
+.stat-card:nth-child(2){border-color:var(--red);}
+.stat-card:nth-child(3){border-color:var(--gold);}
+.stat-card:nth-child(4){border-color:var(--green);}
+.stat-num{font-family:'Tajawal',sans-serif;font-size:32px;font-weight:900;line-height:1;}
+.stat-card:nth-child(1) .stat-num{color:var(--navy);}
+.stat-card:nth-child(2) .stat-num{color:var(--red);}
+.stat-card:nth-child(3) .stat-num{color:var(--gold);}
+.stat-card:nth-child(4) .stat-num{color:var(--green);}
+.stat-label{font-size:12px;color:var(--text2);margin-top:4px;font-weight:600;}
+
+.banner{background:linear-gradient(135deg,var(--navy2),var(--navy));border-radius:14px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;box-shadow:var(--shadow-lg);gap:16px;flex-wrap:wrap;}
+.banner h2{font-family:'Tajawal',sans-serif;font-weight:900;font-size:16px;color:#fff;margin-bottom:2px;}
+.banner p{font-size:11px;color:rgba(255,255,255,.5);}
+.banner-btns{display:flex;gap:7px;flex-wrap:wrap;flex-shrink:0;}
+
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px;gap:10px;flex-wrap:wrap;}
+.sec-title{font-family:'Tajawal',sans-serif;font-weight:900;font-size:17px;color:var(--navy);display:flex;align-items:center;gap:7px;}
+.sec-title::before{content:'';width:4px;height:18px;background:var(--red);border-radius:2px;display:inline-block;}
+
+.search-wrap{display:flex;align-items:center;gap:9px;background:#fff;border:2px solid var(--gray);border-radius:10px;padding:8px 12px;margin-bottom:12px;transition:border .2s;}
+.search-wrap:focus-within{border-color:var(--navy);}
+.search-wrap input{flex:1;border:none;outline:none;font-family:'Cairo',sans-serif;font-size:14px;background:transparent;text-align:right;color:var(--text);}
+.search-wrap input::placeholder{color:var(--text2);}
+
+.tbl-wrap{background:#fff;border-radius:13px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:16px;}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--navy);}
+thead th{color:#fff;font-size:12px;font-weight:700;padding:11px 12px;text-align:right;white-space:nowrap;}
+tbody tr{border-bottom:1px solid var(--gray);transition:background .15s;}
+tbody tr:last-child{border:none;}
+tbody tr:hover{background:var(--cream);}
+tbody td{padding:10px 12px;font-size:13px;text-align:right;vertical-align:middle;}
+.vname{font-weight:700;color:var(--navy);font-size:14px;cursor:pointer;}
+.vname:hover{text-decoration:underline;}
+.vschool{font-size:11px;color:var(--text2);}
+.pts-badge{display:inline-flex;align-items:center;gap:3px;background:var(--navy);color:#fff;font-weight:900;font-size:13px;padding:3px 11px;border-radius:999px;font-family:'Tajawal',sans-serif;}
+.trp-badge{display:inline-flex;align-items:center;gap:3px;background:#eef2ff;color:var(--navy);font-weight:700;font-size:12px;padding:3px 9px;border-radius:999px;}
+.empty-row td{text-align:center;padding:44px;color:var(--text2);font-size:14px;}
+
+.trip-card{background:#fff;border-radius:11px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);display:flex;align-items:flex-start;justify-content:space-between;gap:9px;border-right:4px solid var(--navy);transition:transform .15s;}
+.trip-card:hover{transform:translateX(-2px);}
+.trip-card[data-act="فرز ملابس"]{border-color:#8b5cf6;}
+.trip-card[data-act="فرز أدوية"]{border-color:var(--green);}
+.trip-card[data-act="إطعام"]{border-color:var(--gold);}
+.trip-card[data-act="فرحة"]{border-color:var(--red);}
+.trip-card[data-act="زيارة"]{border-color:#0891b2;}
+.trip-card[data-act="تحقيق أماني"]{border-color:#d97706;}
+.tvol{font-weight:700;font-size:14px;color:var(--navy);cursor:pointer;}
+.tvol:hover{text-decoration:underline;}
+.tmeta{font-size:12px;color:var(--text2);margin-top:3px;}
+.tnotes{font-size:11px;color:#666;margin-top:3px;}
+.tpts{background:var(--navy);color:#fff;font-weight:900;font-size:13px;padding:4px 11px;border-radius:999px;white-space:nowrap;font-family:'Tajawal',sans-serif;flex-shrink:0;}
+.ab{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-left:4px;}
+.ab-فرز-ملابس{background:#ede9fe;color:#6d28d9;}
+.ab-فرز-أدوية{background:#d1fae5;color:#065f46;}
+.ab-إطعام{background:#fef3c7;color:#92400e;}
+.ab-فرحة{background:#fee2e2;color:#991b1b;}
+.ab-زيارة{background:#cffafe;color:#155e75;}
+.ab-تحقيق-أماني{background:#fde68a;color:#78350f;}
+.ab-أخرى{background:#f0f0f0;color:#444;}
+
+.filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px;}
+.fchip{padding:5px 12px;border-radius:999px;border:2px solid var(--gray);background:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--text2);font-family:'Cairo',sans-serif;}
+.fchip:hover{border-color:var(--navy);color:var(--navy);}
+.fchip.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+
+.lb-item{background:#fff;border-radius:12px;padding:13px 16px;display:flex;align-items:center;gap:13px;margin-bottom:8px;box-shadow:var(--shadow);transition:transform .2s;}
+.lb-item:hover{transform:translateX(-4px);}
+.lb-item:nth-child(1){border:2px solid var(--gold);}
+.lb-item:nth-child(2){border:2px solid #c0c0c0;}
+.lb-item:nth-child(3){border:2px solid #cd7c43;}
+.lb-rank{font-size:22px;width:30px;text-align:center;flex-shrink:0;}
+.lb-name{font-weight:700;font-size:15px;color:var(--navy);cursor:pointer;}
+.lb-name:hover{text-decoration:underline;}
+.lb-sub{font-size:11px;color:var(--text2);margin-top:2px;}
+.lb-bar-bg{background:var(--gray);border-radius:999px;height:6px;overflow:hidden;margin-top:5px;}
+.lb-bar{height:6px;background:var(--navy);border-radius:999px;transition:width .6s ease;}
+.lb-item:nth-child(1) .lb-bar{background:var(--gold);}
+.lb-item:nth-child(2) .lb-bar{background:#94a3b8;}
+.lb-item:nth-child(3) .lb-bar{background:#cd7c43;}
+.lb-pts{font-family:'Tajawal',sans-serif;font-weight:900;font-size:24px;color:var(--navy);width:48px;text-align:center;flex-shrink:0;}
+
+.overlay{position:fixed;inset:0;background:rgba(10,18,40,.55);backdrop-filter:blur(4px);z-index:1000;display:none;align-items:center;justify-content:center;padding:12px;}
+.overlay.open{display:flex;}
+.modal{background:#fff;border-radius:18px;padding:24px 20px;width:100%;max-width:520px;box-shadow:var(--shadow-lg);animation:popIn .22s ease;max-height:93vh;overflow-y:auto;}
+@keyframes popIn{from{opacity:0;transform:scale(.93) translateY(14px)}to{opacity:1;transform:none}}
+.modal-title{font-family:'Tajawal',sans-serif;font-weight:900;font-size:19px;color:var(--navy);margin-bottom:16px;}
+.fg{margin-bottom:12px;}
+.fl{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:4px;display:block;}
+.fi,.fs{width:100%;padding:10px 11px;border:2px solid var(--gray);border-radius:9px;font-family:'Cairo',sans-serif;font-size:14px;color:var(--text);text-align:right;outline:none;transition:border .2s;background:#fff;}
+.fi:focus,.fs:focus{border-color:var(--navy);}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.mfoot{display:flex;gap:8px;margin-top:14px;justify-content:flex-end;flex-wrap:wrap;}
+.hrs-row{display:flex;gap:6px;flex-wrap:wrap;}
+.hbtn{padding:7px 13px;border-radius:999px;border:2px solid var(--gray);background:#fff;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;color:var(--text2);}
+.hbtn:hover{border-color:var(--navy);color:var(--navy);}
+.hbtn.sel{background:var(--navy);color:#fff;border-color:var(--navy);}
+.pts-prev{background:var(--cream);border-radius:11px;padding:12px;border:2px solid var(--gray);text-align:center;margin-top:10px;}
+.pts-prev-num{font-family:'Tajawal',sans-serif;font-weight:900;font-size:26px;color:var(--navy);}
+
+.bulk-list{max-height:180px;overflow-y:auto;border:2px solid var(--gray);border-radius:9px;padding:6px;}
+.bulk-item{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:7px;cursor:pointer;transition:background .15s;}
+.bulk-item:hover{background:var(--cream);}
+.bulk-item input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--navy);}
+.bulk-item label{font-size:13px;font-weight:600;cursor:pointer;flex:1;}
+.sel-all-row{display:flex;align-items:center;gap:8px;padding:4px 8px 6px;border-bottom:1px solid var(--gray);margin-bottom:4px;}
+.sel-all-row label{font-size:12px;font-weight:700;color:var(--navy);cursor:pointer;}
+
+.trip-rows-wrap{max-height:300px;overflow-y:auto;padding-right:2px;}
+.mtr{display:grid;grid-template-columns:2fr 2fr 1fr 1fr auto;gap:6px;align-items:center;background:var(--cream);border-radius:9px;padding:8px 10px;margin-bottom:6px;}
+.mtr select,.mtr input{padding:7px 9px;border:2px solid var(--gray);border-radius:7px;font-family:'Cairo',sans-serif;font-size:12px;text-align:right;outline:none;background:#fff;width:100%;}
+.mtr select:focus,.mtr input:focus{border-color:var(--navy);}
+.mtr .rm{background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.mtr .rm:hover{background:#fecaca;}
+.add-row{width:100%;padding:9px;border-radius:9px;border:2px dashed var(--gray2);background:transparent;cursor:pointer;color:var(--text2);font-family:'Cairo',sans-serif;font-size:13px;font-weight:600;transition:all .2s;margin-top:2px;display:flex;align-items:center;justify-content:center;gap:5px;}
+.add-row:hover{border-color:var(--navy);color:var(--navy);background:var(--cream);}
+.mtr-header{display:grid;grid-template-columns:2fr 2fr 1fr 1fr auto;gap:6px;padding:0 10px 4px;font-size:11px;font-weight:700;color:var(--text2);}
+
+.vp-hdr{background:linear-gradient(135deg,var(--navy2),var(--navy));border-radius:12px;padding:18px;color:#fff;margin-bottom:14px;display:flex;align-items:center;gap:12px;}
+.vp-av{width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;border:2px solid rgba(255,255,255,.3);}
+.vp-name{font-family:'Tajawal',sans-serif;font-weight:900;font-size:18px;}
+.vp-sub{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px;}
+.vp-stats{display:flex;gap:16px;margin-top:9px;}
+.vp-stat .n{font-family:'Tajawal',sans-serif;font-weight:900;font-size:18px;color:var(--gold);}
+.vp-stat .l{font-size:10px;color:rgba(255,255,255,.5);}
+
+.toast{position:fixed;bottom:16px;left:16px;background:var(--navy);color:#fff;padding:11px 17px;border-radius:11px;font-size:13px;font-weight:600;z-index:9999;display:none;align-items:center;gap:7px;box-shadow:var(--shadow-lg);animation:slideUp .3s ease;}
+.toast.show{display:flex;}
+.toast.ok{background:var(--green);}
+.toast.err{background:var(--red);}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.divider{height:1px;background:var(--gray);margin:14px 0;}
+
+/* ══ AI CHAT ══ */
+.ai-bubble{display:flex;gap:10px;align-items:flex-start;max-width:85%;}
+.ai-bubble.ai-user{align-self:flex-end;flex-direction:row-reverse;}
+.ai-avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;background:var(--gray);}
+.ai-bubble.ai-user .ai-avatar{background:var(--navy);color:#fff;font-size:14px;}
+.ai-text{background:var(--cream);border-radius:14px 14px 14px 4px;padding:10px 14px;font-size:14px;line-height:1.6;color:var(--text);}
+.ai-bubble.ai-user .ai-text{background:var(--navy);color:#fff;border-radius:14px 14px 4px 14px;}
+
+/* ══ MOBILE NAV BOTTOM BAR ══ */
+.mobile-nav{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--navy);z-index:300;padding:6px 0 env(safe-area-inset-bottom,6px);box-shadow:0 -2px 16px rgba(0,0,0,.3);}
+.mobile-nav-inner{display:flex;justify-content:space-around;align-items:center;}
+.mnav-btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;border:none;background:transparent;color:rgba(255,255,255,.55);font-family:'Cairo',sans-serif;font-size:9px;font-weight:700;cursor:pointer;transition:color .2s;border-radius:8px;min-width:52px;}
+.mnav-btn .mico{font-size:18px;line-height:1;}
+.mnav-btn.active{color:#fff;}
+.mnav-btn.active .mico{filter:drop-shadow(0 0 4px rgba(255,255,255,.5));}
+.mnav-fab{position:fixed;bottom:72px;left:50%;transform:translateX(-50%);z-index:301;display:none;gap:8px;flex-direction:row;}
+.mnav-fab-btn{display:flex;align-items:center;gap:5px;padding:10px 16px;border-radius:999px;border:none;font-family:'Cairo',sans-serif;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);white-space:nowrap;}
+
+@media(max-width:700px){
+  /* hide desktop nav tabs, show mobile bar */
+  .nav-tabs{display:none;}
+  .mobile-nav{display:block;}
+  /* push page content above bottom nav */
+  .container{padding-bottom:80px;}
+
+  /* navbar — tighter */
+  .navbar{padding:0 12px;height:54px;}
+  .brand{font-size:16px;}
+  .nav-btns .btn:not(.user-badge){display:none;}
+  .nav-btns{gap:4px;}
+  .user-badge{padding:4px 8px;}
+  .user-badge .role-tag{display:none;}
+
+  /* stats */
+  .stats-grid{grid-template-columns:1fr 1fr;gap:8px;}
+  .stat-num{font-size:26px;}
+
+  /* banner — stack vertically */
+  .banner{flex-direction:column;align-items:flex-start;padding:14px 16px;gap:10px;}
+  .banner h2{font-size:14px;}
+  .banner-btns{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .banner-btns .btn{justify-content:center;font-size:12px;padding:8px 10px;}
+
+  /* forms */
+  .frow{grid-template-columns:1fr;}
+  .admin-grid{grid-template-columns:1fr;}
+
+  /* volunteers table — card-based on mobile */
+  .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  table{min-width:480px;}
+  thead th{font-size:11px;padding:8px 8px;}
+  tbody td{padding:8px 8px;font-size:12px;}
+
+  /* trip rows in modal */
+  .mtr{grid-template-columns:1fr 1fr;row-gap:6px;}
+  .mtr .row-act{grid-column:1/-1;}
+  .mtr-header{display:none;}
+
+  /* modals — full-screen-ish on mobile */
+  .overlay{padding:0;align-items:flex-end;}
+  .modal{border-radius:20px 20px 0 0;max-height:88vh;padding:20px 16px 28px;}
+
+  /* login card */
+  .login-card{padding:28px 18px;border-radius:18px;}
+
+  /* leaderboard */
+  .lb-pts{font-size:20px;width:38px;}
+  .lb-name{font-size:14px;}
+
+  /* section header */
+  .sec-hdr{gap:6px;}
+  .sec-title{font-size:15px;}
+
+  /* filters wrap */
+  .filters{gap:5px;}
+  .fchip{font-size:11px;padding:4px 10px;}
+
+  /* admin danger zone */
+  [style*="grid-column:span 2"]{grid-column:span 1 !important;}
+
+  /* admin-only FAB buttons for quick add */
+  .mnav-fab{display:flex;}
+}
+
+@media(max-width:380px){
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .banner-btns{grid-template-columns:1fr;}
+  .stat-num{font-size:22px;}
+  .mnav-btn{min-width:40px;padding:5px 6px;font-size:8px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="login-screen">
+  <div class="bg-dots"></div>
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>Resala <span>STEM</span></h1>
+      <p>نظام تتبع النزولات والبوينتس</p>
+    </div>
+
+    <div class="login-tabs">
+      <button class="ltab active" onclick="switchLoginTab('admin',this)">👑 دخول Admin</button>
+      <button class="ltab" onclick="switchLoginTab('viewer',this)">👁️ عرض فقط</button>
+    </div>
+
+    <!-- Admin Login -->
+    <div class="login-form active" id="lf-admin">
+      <div class="lf-group">
+        <label class="lf-label">اسم المستخدم</label>
+        <input class="lf-input" id="a-user" type="text" placeholder="أدخل اسم المستخدم" autocomplete="username">
+      </div>
+      <div class="lf-group">
+        <label class="lf-label">كلمة المرور</label>
+        <input class="lf-input" id="a-pass" type="password" placeholder="أدخل كلمة المرور" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter')doLogin('admin')">
+      </div>
+      <button class="login-btn login-btn-admin" onclick="doLogin('admin')">🔐 دخول</button>
+      <div class="login-err" id="admin-err"></div>
+      <div class="login-hint">
+        <strong>الحساب الافتراضي:</strong><br>
+        المستخدم: <strong>admin</strong> &nbsp;|&nbsp; الباسورد: <strong>resala2024</strong><br>
+        <span style="color:var(--red);font-size:11px">⚠️ غيّر الباسورد من لوحة الإعدادات بعد أول دخول</span>
+      </div>
+    </div>
+
+    <!-- Viewer Login -->
+    <div class="login-form" id="lf-viewer">
+      <div class="lf-group">
+        <label class="lf-label">كود المشاهدة</label>
+        <input class="lf-input" id="v-code" type="password" placeholder="أدخل كود المشاهدة"
+          onkeydown="if(event.key==='Enter')doLogin('viewer')">
+      </div>
+      <button class="login-btn login-btn-viewer" onclick="doLogin('viewer')">👁️ دخول للمشاهدة</button>
+      <div class="login-err" id="viewer-err"></div>
+      <div class="login-hint">
+        <strong>كود المشاهدة الافتراضي:</strong> <strong>stem123</strong><br>
+        <span style="color:var(--text2);font-size:11px">المشاهد يقدر يشوف البيانات بس — مش يعدل</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app">
+
+<nav class="navbar">
+  <div class="brand">Resala <span>STEM</span></div>
+  <div class="nav-tabs">
+    <button class="ntab active" onclick="showPage('dashboard',this)">📊 الرئيسية</button>
+    <button class="ntab" onclick="showPage('volunteers',this)">👥 المتطوعين</button>
+    <button class="ntab" onclick="showPage('trips',this)">📋 النزولات</button>
+    <button class="ntab" onclick="showPage('leaderboard',this)">🏆 الترتيب</button>
+    <button class="ntab" onclick="showPage('ai',this)">🤖 المساعد</button>
+    <button class="ntab admin-only" onclick="showPage('settings',this)">⚙️ الإعدادات</button>
+  </div>
+  <div class="nav-btns">
+    <button class="btn btn-white btn-sm admin-only" onclick="openAddVol()">➕ متطوع</button>
+    <button class="btn btn-red btn-sm admin-only" onclick="openAddTrip()">📝 نزولة</button>
+    <div class="user-badge" onclick="doLogout()">
+      <span class="role-icon" id="nb-icon">👑</span>
+      <div>
+        <div class="role-name" id="nb-name">Admin</div>
+        <div class="role-tag">اضغط للخروج</div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ DASHBOARD ══ -->
+<div class="page active" id="page-dashboard">
+<div class="container">
+  <div class="admin-only-block">
+    <div class="banner">
+      <div><h2>مرحبًا في نظام نزولات Resala STEM 💚</h2><p>ابدأ بإضافة المتطوعين وتسجيل النزولات — البوينتس بتتحسب تلقائيًا</p></div>
+      <div class="banner-btns">
+        <button class="btn btn-white" onclick="openAddVol()">➕ إضافة متطوع</button>
+        <button class="btn btn-red" onclick="openAddTrip()">📝 نزولة فردية</button>
+        <button class="btn btn-green" onclick="openBulk()">👥 نزولة جماعية</button>
+        <button class="btn btn-gold" onclick="openMulti()">📋 كذا نزولة دفعة</button>
+      </div>
+    </div>
+  </div>
+  <div id="viewer-dash-notice"></div>
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-num" id="s-v">0</div><div class="stat-label">👥 المتطوعين</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-t">0</div><div class="stat-label">📋 النزولات</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-p">0</div><div class="stat-label">⭐ البوينتس</div></div>
+    <div class="stat-card"><div class="stat-num" id="s-h">0</div><div class="stat-label">⏱️ الساعات</div></div>
+  </div>
+  <div class="sec-hdr"><div class="sec-title">آخر النزولات</div><button class="btn btn-outline btn-sm" onclick="showPage('trips',null)">عرض الكل ←</button></div>
+  <div id="dash-recent"></div>
+  <div class="sec-hdr" style="margin-top:24px"><div class="sec-title">🏆 أعلى المتطوعين</div><button class="btn btn-outline btn-sm" onclick="showPage('leaderboard',null)">الترتيب الكامل ←</button></div>
+  <div id="dash-top"></div>
+</div></div>
+
+<!-- ══ VOLUNTEERS ══ -->
+<div class="page" id="page-volunteers">
+<div class="container">
+  <div class="banner">
+    <div><h2>👥 إدارة المتطوعين</h2><p>اضغط على اسم أي متطوع لعرض ملفه الكامل</p></div>
+    <div class="banner-btns">
+      <button class="btn btn-white admin-only" onclick="openAddVol()">➕ إضافة متطوع</button>
+      <button class="btn btn-gold admin-only" onclick="exportExcel()">📥 تصدير Excel</button>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <span>🔍</span>
+    <input id="vol-q" type="text" placeholder="ابحث باسم المتطوع أو المدرسة أو رقم الهاتف..." oninput="renderVols()">
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('vol-q').value='';renderVols()">✕</button>
+  </div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>#</th><th>الاسم</th><th>المدرسة / الفرع</th><th>رقم الهاتف</th><th>النزولات</th><th>الساعات</th><th>البوينتس</th><th id="th-actions" style="display:none">إجراءات</th></tr></thead>
+      <tbody id="vols-tb"></tbody>
+    </table>
+  </div>
+</div></div>
+
+<!-- ══ TRIPS ══ -->
+<div class="page" id="page-trips">
+<div class="container">
+  <div class="banner">
+    <div><h2>📋 سجل النزولات</h2><p>كل نزولة ساعتين+ = 4 بوينتس</p></div>
+    <div class="banner-btns">
+      <button class="btn btn-white admin-only" onclick="openAddTrip()">📝 نزولة فردية</button>
+      <button class="btn btn-green admin-only" onclick="openBulk()">👥 نزولة جماعية</button>
+      <button class="btn btn-gold admin-only" onclick="openMulti()">📋 كذا نزولة دفعة</button>
+    </div>
+  </div>
+  <div class="search-wrap">
+    <span>🔍</span>
+    <input id="trip-q" type="text" placeholder="ابحث باسم المتطوع..." oninput="renderTrips()">
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('trip-q').value='';renderTrips()">✕</button>
+  </div>
+  <div class="filters">
+    <div class="fchip active" data-act="all" onclick="filterAct(this)">الكل</div>
+    <div class="fchip" data-act="فرز ملابس" onclick="filterAct(this)">👕 فرز ملابس</div>
+    <div class="fchip" data-act="فرز أدوية" onclick="filterAct(this)">💊 فرز أدوية</div>
+    <div class="fchip" data-act="إطعام" onclick="filterAct(this)">🍽️ إطعام</div>
+    <div class="fchip" data-act="فرحة" onclick="filterAct(this)">🎁 فرحة</div>
+    <div class="fchip" data-act="زيارة" onclick="filterAct(this)">🏥 زيارة</div>
+    <div class="fchip" data-act="تحقيق أماني" onclick="filterAct(this)">⭐ تحقيق أماني</div>
+    <div class="fchip" data-act="أخرى" onclick="filterAct(this)">♻️ أخرى</div>
+  </div>
+  <div id="trips-list"></div>
+</div></div>
+
+<!-- ══ LEADERBOARD ══ -->
+<div class="page" id="page-leaderboard">
+<div class="container">
+  <div class="banner">
+    <div><h2>🏆 ترتيب البوينتس</h2><p>اضغط على اسم المتطوع لعرض ملفه</p></div>
+    <div class="banner-btns"><button class="btn btn-gold admin-only" onclick="exportExcel()">📥 تصدير Excel</button></div>
+  </div>
+  <div class="search-wrap">
+    <span>🔍</span>
+    <input id="lb-q" type="text" placeholder="ابحث في الترتيب..." oninput="renderLB()">
+    <button class="btn btn-outline btn-sm" onclick="document.getElementById('lb-q').value='';renderLB()">✕</button>
+  </div>
+  <div id="lb-list"></div>
+</div></div>
+
+<!-- ══ SETTINGS (Admin only) ══ -->
+<div class="page" id="page-settings">
+<div class="container">
+  <div class="banner">
+    <div><h2>⚙️ الإعدادات والصلاحيات</h2><p>إدارة حسابات الدخول وكلمات المرور</p></div>
+  </div>
+  <div class="admin-grid">
+
+    <!-- Change Admin Password -->
+    <div class="admin-card">
+      <h3>🔐 تغيير باسورد Admin</h3>
+      <div class="fg"><label class="fl">اسم المستخدم الحالي</label><input class="fi" id="set-cur-user" type="text" placeholder="اسم المستخدم الحالي"></div>
+      <div class="fg"><label class="fl">الباسورد الحالي</label><input class="fi" id="set-cur-pass" type="password" placeholder="الباسورد الحالي"></div>
+      <div class="fg"><label class="fl">الباسورد الجديد</label><input class="fi" id="set-new-pass" type="password" placeholder="اختار باسورد قوي"></div>
+      <div class="fg"><label class="fl">تأكيد الباسورد الجديد</label><input class="fi" id="set-conf-pass" type="password" placeholder="أعد كتابة الباسورد الجديد"></div>
+      <button class="btn btn-navy" onclick="changeAdminPass()" style="width:100%;justify-content:center">💾 حفظ الباسورد الجديد</button>
+    </div>
+
+    <!-- Change Viewer Code -->
+    <div class="admin-card">
+      <h3>👁️ تغيير كود المشاهدة</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">الكود ده بتديه لأي حد يعرض البيانات بس من غير ما يقدر يعدل</p>
+      <div class="fg"><label class="fl">كود المشاهدة الحالي</label><input class="fi" id="set-cur-vcode" type="password" placeholder="الكود الحالي"></div>
+      <div class="fg"><label class="fl">كود المشاهدة الجديد</label><input class="fi" id="set-new-vcode" type="text" placeholder="مثال: stem2024"></div>
+      <button class="btn btn-green" onclick="changeViewerCode()" style="width:100%;justify-content:center">💾 حفظ الكود الجديد</button>
+    </div>
+
+    <!-- Add Admin User -->
+    <div class="admin-card">
+      <h3>➕ إضافة مستخدم Admin جديد</h3>
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px">أضف ليدر أو كو-ليدر كـ Admin</p>
+      <div class="fg"><label class="fl">اسم المستخدم</label><input class="fi" id="new-admin-user" type="text" placeholder="مثال: leader2"></div>
+      <div class="fg"><label class="fl">كلمة المرور</label><input class="fi" id="new-admin-pass" type="password" placeholder="باسورد المستخدم الجديد"></div>
+      <button class="btn btn-navy" onclick="addAdminUser()" style="width:100%;justify-content:center">➕ إضافة Admin</button>
+    </div>
+
+    <!-- Users List -->
+    <div class="admin-card">
+      <h3>👥 المستخدمين الحاليين</h3>
+      <div id="users-list"></div>
+    </div>
+
+    <!-- Danger Zone -->
+    <div class="admin-card" style="grid-column:span 2;border:2px solid #fee2e2;">
+      <h3 style="color:var(--red)">⚠️ منطقة الخطر</h3>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-danger" onclick="exportBackup()">📤 تصدير Backup كامل</button>
+        <button class="btn btn-outline" onclick="document.getElementById('import-file').click()">📥 استيراد Backup</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importBackup(this)">
+        <button class="btn btn-danger" onclick="clearAllData()" style="margin-right:auto">🗑️ حذف كل البيانات</button>
+      </div>
+    </div>
+
+  </div>
+</div></div>
+
+<!-- ══ AI CHATBOT PAGE ══ -->
+<div class="page" id="page-ai">
+<div class="container" style="max-width:700px">
+  <div class="sec-hdr" style="margin-bottom:16px">
+    <div class="sec-title">🤖 المساعد الذكي</div>
+    <button class="btn btn-outline btn-sm" onclick="copyEmbedCode()">🔗 كود التضمين</button>
+  </div>
+  <div style="background:#fff;border-radius:18px;box-shadow:var(--shadow-lg);overflow:hidden;display:flex;flex-direction:column;height:72vh">
+    <!-- Chat messages -->
+    <div id="ai-msgs" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px">
+      <div class="ai-bubble ai-bot">
+        <div class="ai-avatar">🤖</div>
+        <div class="ai-text">أهلاً! أنا المساعد الذكي لـ Resala STEM. ازيك؟ 😊<br>ممكن أساعدك في أي سؤال عن التطوع أو الجمعية.</div>
+      </div>
+    </div>
+    <!-- Typing indicator -->
+    <div id="ai-typing" style="display:none;padding:0 20px 8px;color:var(--text2);font-size:12px">🤖 بيكتب...</div>
+    <!-- Input -->
+    <div style="border-top:2px solid var(--gray);padding:14px 16px;display:flex;gap:10px;align-items:center">
+      <input id="ai-input" type="text" placeholder="اكتب سؤالك هنا..."
+        style="flex:1;padding:11px 14px;border:2px solid var(--gray);border-radius:10px;font-family:Cairo,sans-serif;font-size:14px;outline:none;transition:border .2s"
+        onfocus="this.style.borderColor='var(--navy)'" onblur="this.style.borderColor='var(--gray)'"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendAiMsg();}">
+      <button onclick="sendAiMsg()" style="padding:11px 18px;background:var(--navy);color:#fff;border:none;border-radius:10px;font-family:Cairo,sans-serif;font-weight:700;font-size:14px;cursor:pointer">إرسال ↑</button>
+    </div>
+  </div>
+  <p style="font-size:11px;color:var(--text2);text-align:center;margin-top:10px">
+    مدعوم بـ Claude AI · يمكن تضمينه في أي موقع عبر زرار "كود التضمين"
+  </p>
+</div></div>
+<div class="overlay" id="m-editpts" onclick="if(event.target===this)close_m('m-editpts')">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-hdr">
+      <h3>⭐ تعديل البوينتس</h3>
+      <button class="modal-close" onclick="close_m('m-editpts')">✕</button>
+    </div>
+    <div style="text-align:center;margin-bottom:18px">
+      <div style="font-size:18px;font-weight:700;color:var(--navy)" id="ep-name"></div>
+    </div>
+    <div style="background:var(--cream);border-radius:12px;padding:14px 16px;margin-bottom:18px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)">
+        <span>بوينتس من النزولات الحقيقية</span>
+        <span style="font-weight:700;color:var(--navy)" id="ep-trip-pts">0</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text2)">
+        <span>بوينتس إضافية (هتتحول لنزولات تلقائياً)</span>
+        <input id="ep-bonus" type="number" min="0" oninput="epCalcTotal()"
+          style="width:80px;padding:4px 8px;border:2px solid var(--gray2);border-radius:8px;font-family:Cairo,sans-serif;font-size:14px;font-weight:700;text-align:center;outline:none">
+      </div>
+      <div style="border-top:2px dashed var(--gray2);padding-top:8px;display:flex;justify-content:space-between;font-size:15px;font-weight:900;color:var(--navy)">
+        <span>الإجمالي</span>
+        <span id="ep-total">0</span>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;text-align:center">
+      ✏️ كل 4 pts = نزولة — هيتسجلوا تلقائياً في النزولات والـ Excel
+    </p>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" style="flex:1" onclick="close_m('m-editpts')">إلغاء</button>
+      <button class="btn btn-red" style="flex:2" onclick="saveEditPts()">💾 حفظ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MOBILE BOTTOM NAV ══ -->
+<nav class="mobile-nav">
+  <div class="mobile-nav-inner">
+    <button class="mnav-btn active" id="mnav-dashboard" onclick="showPage('dashboard',null);setMnav('dashboard')">
+      <span class="mico">📊</span>الرئيسية
+    </button>
+    <button class="mnav-btn" id="mnav-volunteers" onclick="showPage('volunteers',null);setMnav('volunteers')">
+      <span class="mico">👥</span>المتطوعين
+    </button>
+    <button class="mnav-btn" id="mnav-trips" onclick="showPage('trips',null);setMnav('trips')">
+      <span class="mico">📋</span>النزولات
+    </button>
+    <button class="mnav-btn" id="mnav-leaderboard" onclick="showPage('leaderboard',null);setMnav('leaderboard')">
+      <span class="mico">🏆</span>الترتيب
+    </button>
+    <button class="mnav-btn" id="mnav-ai" onclick="showPage('ai',null);setMnav('ai')">
+      <span class="mico">🤖</span>المساعد
+    </button>
+    <button class="mnav-btn admin-only" id="mnav-settings" onclick="showPage('settings',null);setMnav('settings')">
+      <span class="mico">⚙️</span>الإعدادات
+    </button>
+  </div>
+</nav>
+<!-- FAB quick-add buttons (admin, mobile) -->
+<div class="mnav-fab admin-only" id="mob-fab">
+  <button class="mnav-fab-btn" style="background:var(--navy);color:#fff" onclick="openAddVol()">➕ متطوع</button>
+  <button class="mnav-fab-btn" style="background:var(--red);color:#fff" onclick="openAddTrip()">📝 نزولة</button>
+</div>
+
+</div><!-- end #app -->
+
+<!-- ══ MODALS ══ -->
+<div class="overlay" id="m-vol">
+<div class="modal">
+  <div class="modal-title">👤 إضافة متطوع جديد</div>
+  <div class="fg"><label class="fl">الاسم الكامل *</label><input class="fi" id="v-name" type="text" placeholder="مثال: أحمد محمد علي"></div>
+  <div class="frow">
+    <div class="fg"><label class="fl">المدرسة / الفرع</label><input class="fi" id="v-school" type="text" placeholder="STEM القاهرة"></div>
+    <div class="fg"><label class="fl">رقم الهاتف</label><input class="fi" id="v-phone" type="text" placeholder="01xxxxxxxxx"></div>
+  </div>
+  <div class="fg"><label class="fl">ملاحظات</label><input class="fi" id="v-notes" type="text" placeholder="أي معلومات إضافية..."></div>
+  <div class="mfoot"><button class="btn btn-outline" onclick="close_m('m-vol')">إلغاء</button><button class="btn btn-navy" onclick="saveVol()">💾 حفظ</button></div>
+</div></div>
+
+<div class="overlay" id="m-trip">
+<div class="modal">
+  <div class="modal-title">📝 تسجيل نزولة</div>
+  <div class="fg">
+    <label class="fl">المتطوع *</label>
+    <div class="search-wrap" style="margin-bottom:6px"><span>🔍</span><input id="trip-vol-q" type="text" placeholder="ابحث..." oninput="filterTripVolSel()"></div>
+    <select class="fs" id="t-vol" size="4" style="height:auto;border-radius:9px;padding:4px;"></select>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">النشاط *</label>
+      <select class="fs" id="t-act"><option value="فرز ملابس">👕 فرز ملابس</option><option value="فرز أدوية">💊 فرز أدوية</option><option value="إطعام">🍽️ إطعام</option><option value="فرحة">🎁 فرحة</option><option value="زيارة">🏥 زيارة</option><option value="تحقيق أماني">⭐ تحقيق أماني</option><option value="أخرى">♻️ أخرى</option></select>
+    </div>
+    <div class="fg"><label class="fl">التاريخ *</label><input class="fi" id="t-date" type="date"></div>
+  </div>
+  <div class="fg"><label class="fl">الساعات * (أقل = ساعتين)</label>
+    <div class="hrs-row"><button class="hbtn" onclick="pickH(this,2)">٢ ساعة</button><button class="hbtn" onclick="pickH(this,3)">٣ ساعات</button><button class="hbtn" onclick="pickH(this,4)">٤ ساعات</button><button class="hbtn" onclick="pickH(this,5)">٥ ساعات</button><button class="hbtn" onclick="pickH(this,6)">٦+ ساعات</button></div>
+  </div>
+  <div class="fg"><label class="fl">ملاحظات</label><input class="fi" id="t-notes" type="text" placeholder="وصف النزولة..."></div>
+  <div class="pts-prev"><div class="pts-prev-num" id="pts-p">—</div><div style="font-size:11px;color:var(--text2)">البوينتس اللي هتتحسب</div></div>
+  <div class="mfoot"><button class="btn btn-outline" onclick="close_m('m-trip')">إلغاء</button><button class="btn btn-red" onclick="saveTrip()">✅ تسجيل</button></div>
+</div></div>
+
+<div class="overlay" id="m-bulk">
+<div class="modal">
+  <div class="modal-title">👥 نزولة جماعية</div>
+  <div class="fg">
+    <label class="fl">اختر المتطوعين</label>
+    <div class="search-wrap" style="margin-bottom:6px"><span>🔍</span><input id="b-search" type="text" placeholder="ابحث..." oninput="filterBulk()"></div>
+    <div class="bulk-list" id="b-list"></div>
+  </div>
+  <div class="frow">
+    <div class="fg"><label class="fl">النشاط *</label><select class="fs" id="b-act"><option value="فرز ملابس">👕 فرز ملابس</option><option value="فرز أدوية">💊 فرز أدوية</option><option value="إطعام">🍽️ إطعام</option><option value="فرحة">🎁 فرحة</option><option value="زيارة">🏥 زيارة</option><option value="تحقيق أماني">⭐ تحقيق أماني</option><option value="أخرى">♻️ أخرى</option></select></div>
+    <div class="fg"><label class="fl">التاريخ *</label><input class="fi" id="b-date" type="date"></div>
+  </div>
+  <div class="fg"><label class="fl">الساعات *</label>
+    <div class="hrs-row"><button class="hbtn" onclick="pickBH(this,2)">٢ ساعة</button><button class="hbtn" onclick="pickBH(this,3)">٣ ساعات</button><button class="hbtn" onclick="pickBH(this,4)">٤ ساعات</button><button class="hbtn" onclick="pickBH(this,5)">٥ ساعات</button><button class="hbtn" onclick="pickBH(this,6)">٦+ ساعات</button></div>
+  </div>
+  <div class="fg"><label class="fl">ملاحظات</label><input class="fi" id="b-notes" type="text" placeholder="وصف مشترك..."></div>
+  <div class="mfoot"><button class="btn btn-outline" onclick="close_m('m-bulk')">إلغاء</button><button class="btn btn-green" onclick="saveBulk()">✅ تسجيل للمجموعة</button></div>
+</div></div>
+
+<div class="overlay" id="m-multi">
+<div class="modal" style="max-width:600px">
+  <div class="modal-title">📋 كذا نزولة دفعة واحدة</div>
+  <div class="fg">
+    <label class="fl">المتطوع *</label>
+    <div class="search-wrap" style="margin-bottom:6px"><span>🔍</span><input id="multi-vol-q" type="text" placeholder="ابحث..." oninput="filterMultiVolSel()"></div>
+    <select class="fs" id="multi-vol" size="3" style="height:auto;border-radius:9px;padding:4px;"></select>
+  </div>
+  <div class="divider"></div>
+  <div class="fg">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <label class="fl" style="margin:0">النزولات *</label>
+      <button class="btn btn-outline btn-sm" onclick="addTripRow()">+ نزولة</button>
+    </div>
+    <div class="mtr-header"><span>النشاط</span><span>التاريخ</span><span>الساعات</span><span>ملاحظات</span><span></span></div>
+    <div class="trip-rows-wrap" id="trip-rows"></div>
+  </div>
+  <div id="multi-pts-total" style="background:var(--cream);border-radius:10px;padding:10px;text-align:center;border:2px solid var(--gray);margin-top:4px;"></div>
+  <div class="mfoot"><button class="btn btn-outline" onclick="close_m('m-multi')">إلغاء</button><button class="btn btn-red" onclick="saveMulti()">✅ تسجيل كل النزولات</button></div>
+</div></div>
+
+<div class="overlay" id="m-profile">
+<div class="modal">
+  <div class="vp-hdr">
+    <div class="vp-av">👤</div>
+    <div>
+      <div class="vp-name" id="vp-name">—</div>
+      <div class="vp-sub" id="vp-sub">—</div>
+      <div class="vp-stats">
+        <div class="vp-stat"><div class="n" id="vp-pts">0</div><div class="l">بوينتس</div></div>
+        <div class="vp-stat"><div class="n" id="vp-trps">0</div><div class="l">نزولة</div></div>
+        <div class="vp-stat"><div class="n" id="vp-hrs">0</div><div class="l">ساعة</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="sec-hdr" style="margin-bottom:10px"><div class="sec-title" style="font-size:14px">سجل نزولاته</div></div>
+  <div id="vp-trips" style="max-height:280px;overflow-y:auto;"></div>
+  <div class="mfoot">
+    <button class="btn btn-outline" onclick="close_m('m-profile')">إغلاق</button>
+    <button class="btn btn-danger btn-sm admin-only" id="vp-del-btn">🗑️ حذف المتطوع</button>
+  </div>
+</div></div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════
+//  AUTH SYSTEM
+// ════════════════════════════════════════════
+const DEFAULT_CREDS = {
+  admins: [{user:'admin', pass:'resala2024'}],
+  viewerCode: 'stem123'
+};
+
+function getCreds(){
+  const saved = localStorage.getItem('rs_creds');
+  return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(DEFAULT_CREDS));
+}
+function saveCreds(c){ localStorage.setItem('rs_creds', JSON.stringify(c)); }
+
+let currentRole = null; // 'admin' | 'viewer'
+let currentUser = null;
+
+function switchLoginTab(tab, btn){
+  document.querySelectorAll('.ltab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.login-form').forEach(f=>f.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('lf-'+tab).classList.add('active');
+  document.getElementById('admin-err').textContent='';
+  document.getElementById('viewer-err').textContent='';
+}
+
+function doLogin(role){
+  const creds = getCreds();
+  if(role==='admin'){
+    const u = document.getElementById('a-user').value.trim();
+    const p = document.getElementById('a-pass').value;
+    const found = creds.admins.find(a=>a.user===u && a.pass===p);
+    if(!found){
+      document.getElementById('a-pass').classList.add('err');
+      document.getElementById('admin-err').textContent='❌ اسم المستخدم أو الباسورد غلط';
+      setTimeout(()=>document.getElementById('a-pass').classList.remove('err'),1500);
+      return;
+    }
+    currentRole='admin'; currentUser=u;
+  } else {
+    const code = document.getElementById('v-code').value;
+    if(code !== creds.viewerCode){
+      document.getElementById('v-code').classList.add('err');
+      document.getElementById('viewer-err').textContent='❌ الكود غلط';
+      setTimeout(()=>document.getElementById('v-code').classList.remove('err'),1500);
+      return;
+    }
+    currentRole='viewer'; currentUser='مشاهد';
+  }
+  sessionStorage.setItem('rs_role', currentRole);
+  sessionStorage.setItem('rs_user', currentUser);
+  bootApp();
+}
+
+function bootApp(){
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('app').style.display='block';
+
+  if(currentRole==='admin'){
+    document.body.classList.add('is-admin');
+    document.getElementById('nb-icon').textContent='👑';
+    document.getElementById('nb-name').textContent=currentUser;
+    document.getElementById('th-actions').style.display='';
+    // show viewer notice off
+    document.getElementById('viewer-dash-notice').innerHTML='';
+  } else {
+    document.body.classList.remove('is-admin');
+    document.getElementById('nb-icon').textContent='👁️';
+    document.getElementById('nb-name').textContent='مشاهد';
+    document.getElementById('th-actions').style.display='none';
+    document.getElementById('viewer-dash-notice').innerHTML=`
+      <div class="viewer-notice">👁️ أنت في وضع المشاهدة فقط — يمكنك رؤية البيانات لكن لا يمكنك التعديل أو الإضافة</div>`;
+  }
+  renderDash();
+  renderUsersList();
+  // تحميل البيانات من Firebase
+  loadFromFirebase();
+}
+
+function doLogout(){
+  if(!confirm('هتخرج من الحساب؟'))return;
+  currentRole=null; currentUser=null;
+  sessionStorage.removeItem('rs_role');
+  sessionStorage.removeItem('rs_user');
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('app').style.display='none';
+  document.getElementById('a-pass').value='';
+  document.getElementById('v-code').value='';
+}
+
+// ════════ SETTINGS ════════
+function changeAdminPass(){
+  const creds=getCreds();
+  const curUser=document.getElementById('set-cur-user').value.trim();
+  const curPass=document.getElementById('set-cur-pass').value;
+  const newPass=document.getElementById('set-new-pass').value;
+  const confPass=document.getElementById('set-conf-pass').value;
+  const idx=creds.admins.findIndex(a=>a.user===curUser&&a.pass===curPass);
+  if(idx===-1){toast('❌ اسم المستخدم أو الباسورد الحالي غلط','err');return;}
+  if(newPass.length<4){toast('⚠️ الباسورد الجديد قصير جداً (أقل 4 حروف)','err');return;}
+  if(newPass!==confPass){toast('⚠️ الباسورد الجديد مش متطابق','err');return;}
+  creds.admins[idx].pass=newPass;
+  saveCreds(creds);
+  ['set-cur-user','set-cur-pass','set-new-pass','set-conf-pass'].forEach(id=>document.getElementById(id).value='');
+  toast('✅ تم تغيير الباسورد بنجاح','ok');
+}
+
+function changeViewerCode(){
+  const creds=getCreds();
+  const cur=document.getElementById('set-cur-vcode').value;
+  const nw=document.getElementById('set-new-vcode').value.trim();
+  if(cur!==creds.viewerCode){toast('❌ الكود الحالي غلط','err');return;}
+  if(nw.length<3){toast('⚠️ الكود الجديد قصير جداً','err');return;}
+  creds.viewerCode=nw;
+  saveCreds(creds);
+  document.getElementById('set-cur-vcode').value='';
+  document.getElementById('set-new-vcode').value='';
+  toast('✅ تم تغيير كود المشاهدة','ok');
+}
+
+function addAdminUser(){
+  const creds=getCreds();
+  const u=document.getElementById('new-admin-user').value.trim();
+  const p=document.getElementById('new-admin-pass').value;
+  if(!u||!p){toast('⚠️ أدخل الاسم والباسورد','err');return;}
+  if(creds.admins.find(a=>a.user===u)){toast('⚠️ اسم المستخدم موجود بالفعل','err');return;}
+  if(p.length<4){toast('⚠️ الباسورد قصير جداً','err');return;}
+  creds.admins.push({user:u,pass:p});
+  saveCreds(creds);
+  document.getElementById('new-admin-user').value='';
+  document.getElementById('new-admin-pass').value='';
+  renderUsersList();
+  toast('✅ تم إضافة '+u+' كـ Admin','ok');
+}
+
+function deleteAdminUser(u){
+  if(u===currentUser){toast('⚠️ مش هتقدر تحذف حسابك وانت شغال','err');return;}
+  const creds=getCreds();
+  if(creds.admins.length<=1){toast('⚠️ لازم يفضل Admin واحد على الأقل','err');return;}
+  if(!confirm('هتحذف حساب '+u+'؟'))return;
+  creds.admins=creds.admins.filter(a=>a.user!==u);
+  saveCreds(creds);
+  renderUsersList();
+  toast('🗑️ تم حذف '+u,'');
+}
+
+function renderUsersList(){
+  const creds=getCreds();
+  const el=document.getElementById('users-list');
+  if(!el)return;
+  el.innerHTML=creds.admins.map(a=>`
+    <div class="user-list-item">
+      <div>
+        <div class="uname">👑 ${a.user}${a.user===currentUser?' (أنت)':''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span class="urole urole-admin">Admin</span>
+        ${a.user!==currentUser?`<button class="btn btn-danger btn-sm" onclick="deleteAdminUser('${a.user}')">🗑️</button>`:''}
+      </div>
+    </div>`).join('')
+  + `<div class="user-list-item"><div><div class="uname">👁️ كود المشاهدة</div></div><span class="urole urole-viewer">Viewer</span></div>`;
+}
+
+// ════════ BACKUP ════════
+function exportBackup(){
+  const data={volunteers:V,trips:T,exported:new Date().toISOString()};
+  dlFile(JSON.stringify(data,null,2),'resala-stem-backup.json','application/json');
+  toast('✅ تم تصدير الـ Backup','ok');
+}
+function importBackup(input){
+  const file=input.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.volunteers||!data.trips)throw new Error('ملف غير صحيح');
+      if(!confirm('هيتم استبدال كل البيانات الحالية بالـ Backup — متأكد؟'))return;
+      V=data.volunteers; T=data.trips;
+      persist(); renderDash(); renderVols(); renderTrips(); renderLB();
+      toast('✅ تم استيراد الـ Backup بنجاح','ok');
+    }catch(err){toast('❌ ملف الـ Backup غير صحيح','err');}
+  };
+  reader.readAsText(file);
+  input.value='';
+}
+function clearAllData(){
+  if(!confirm('⚠️ هتحذف كل المتطوعين والنزولات. هذا لا يمكن التراجع عنه. متأكد؟'))return;
+  if(!confirm('تأكيد أخير — هتحذف كل البيانات؟'))return;
+  V=[]; T=[];
+  persist(); renderDash(); renderVols(); renderTrips(); renderLB();
+  toast('🗑️ تم حذف كل البيانات','');
+}
+
+// ════════════════════════════════════════════
+//  FIREBASE CONFIG — ضع إعدادات Firebase هنا
+// ════════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyD1U75eKEN091hcxbyyDNSONfmFIu8y52E",
+  authDomain:        "resala-stem-tracker.firebaseapp.com",
+  projectId:         "resala-stem-tracker",
+  storageBucket:     "resala-stem-tracker.firebasestorage.app",
+  messagingSenderId: "160022627941",
+  appId:             "1:160022627941:web:16aa58bdeb193b6316688c"
+};
+
+// ── Init Firebase ──
+firebase.initializeApp(FIREBASE_CONFIG);
+const db = firebase.firestore();
+const DOC  = db.collection('resala').doc('data');
+
+// ════════════════════════════════════════════
+//  DATA
+// ════════════════════════════════════════════
+let V = JSON.parse(localStorage.getItem('rs_v')||'[]');
+let T = JSON.parse(localStorage.getItem('rs_t')||'[]');
+let selH=0,bulkH=0,curAct='all';
+const TODAY=new Date().toISOString().split('T')[0];
+
+// حفظ في Firebase + localStorage كـ cache
+async function persist(){
+  // cache محلي فوري
+  localStorage.setItem('rs_v',JSON.stringify(V));
+  localStorage.setItem('rs_t',JSON.stringify(T));
+  try{
+    await DOC.set({volunteers:V, trips:T});
+  }catch(e){
+    console.warn('Firebase save error:',e);
+    toast('⚠️ تحذير: لم يتم الحفظ على السحابة — تأكد من الإنترنت','err');
+  }
+}
+
+// تحميل البيانات من Firebase عند فتح التطبيق
+async function loadFromFirebase(){
+  showLoadingOverlay(true);
+  try{
+    const snap = await DOC.get();
+    if(snap.exists){
+      const d = snap.data();
+      V = d.volunteers || [];
+      T = d.trips      || [];
+      // حدّث الـ cache
+      localStorage.setItem('rs_v',JSON.stringify(V));
+      localStorage.setItem('rs_t',JSON.stringify(T));
+    }
+  }catch(e){
+    console.warn('Firebase load error — using local cache:',e);
+    toast('⚠️ يعمل بالبيانات المحلية — تأكد من الإنترنت','err');
+  }finally{
+    showLoadingOverlay(false);
+    renderDash(); renderVols(); renderTrips(); renderLB();
+  }
+}
+
+function showLoadingOverlay(show){
+  let el = document.getElementById('fb-loading');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'fb-loading';
+    el.style.cssText='position:fixed;inset:0;background:rgba(10,18,40,.7);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;backdrop-filter:blur(4px);';
+    el.innerHTML='<div style="width:48px;height:48px;border:5px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite"></div><div style="color:#fff;font-family:Cairo,sans-serif;font-weight:700;font-size:15px">جاري تحميل البيانات...</div>';
+    document.body.appendChild(el);
+    // add spin keyframe once
+    if(!document.getElementById('spin-style')){
+      const s=document.createElement('style');
+      s.id='spin-style';s.textContent='@keyframes spin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(s);
+    }
+  }
+  el.style.display = show ? 'flex' : 'none';
+}
+const pts=h=>h>=2?4:0;
+const vTrips=id=>T.filter(t=>t.vid===id);
+const vPts=id=>vTrips(id).reduce((s,t)=>s+t.pts,0);
+const vHrs=id=>vTrips(id).reduce((s,t)=>s+t.hrs,0);
+const fmt=d=>{if(!d)return'';const[y,m,day]=d.split('-');return`${day}/${m}/${y}`;};
+const abCls=a=>'ab-'+(a||'أخرى').replace(/ /g,'-');
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+
+function toast(msg,type=''){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show '+type;
+  setTimeout(()=>el.className='toast',3200);
+}
+
+// ════ GUARD: block actions if viewer ════
+function adminOnly(fn){
+  return function(...args){
+    if(currentRole!=='admin'){toast('🔒 هذه الميزة للـ Admin فقط','err');return;}
+    return fn(...args);
+  };
+}
+
+// ════ NAV ════
+function showPage(name,btn){
+  if(name==='settings'&&currentRole!=='admin'){toast('🔒 الإعدادات للـ Admin فقط','err');return;}
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ntab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  else document.querySelectorAll('.ntab').forEach(t=>{if(t.getAttribute('onclick')?.includes("'"+name+"'"))t.classList.add('active');});
+  if(name==='volunteers')renderVols();
+  else if(name==='trips')renderTrips();
+  else if(name==='leaderboard')renderLB();
+  else if(name==='dashboard')renderDash();
+}
+
+// ════ DASHBOARD ════
+function renderDash(){
+  document.getElementById('s-v').textContent=V.length;
+  document.getElementById('s-t').textContent=T.length;
+  document.getElementById('s-p').textContent=T.reduce((s,t)=>s+t.pts,0);
+  document.getElementById('s-h').textContent=T.reduce((s,t)=>s+t.hrs,0);
+  const rec=[...T].sort((a,b)=>new Date(b.date)-new Date(a.date)).slice(0,5);
+  document.getElementById('dash-recent').innerHTML=rec.length
+    ?rec.map(t=>{const v=V.find(x=>x.id===t.vid);return`<div class="trip-card" data-act="${t.act}"><div><div class="tvol" onclick="openProfile('${t.vid}')">${v?v.name:'—'}</div><div class="tmeta"><span class="ab ${abCls(t.act)}">${t.act}</span> ⏱️ ${t.hrs} ساعة &nbsp;📅 ${fmt(t.date)}</div>${t.notes?`<div class="tnotes">📝 ${t.notes}</div>`:''}</div><div class="tpts">+${t.pts} pts</div></div>`;}).join('')
+    :'<div style="text-align:center;padding:36px;color:var(--text2)">مفيش نزولات لسه 📝</div>';
+  const top=[...V].map(v=>({...v,p:vPts(v.id),n:vTrips(v.id).length})).sort((a,b)=>b.p-a.p).slice(0,3);
+  const mx=top[0]?.p||1;const md=['🥇','🥈','🥉'];
+  document.getElementById('dash-top').innerHTML=top.length&&top[0].p
+    ?top.map((v,i)=>`<div class="lb-item"><div class="lb-rank">${md[i]}</div><div style="flex:1"><div class="lb-name" onclick="openProfile('${v.id}')">${v.name}</div><div class="lb-sub">${v.school||'—'} | ${v.n} نزولة</div><div class="lb-bar-bg"><div class="lb-bar" style="width:${Math.round(v.p/mx*100)}%"></div></div></div><div class="lb-pts">${v.p}</div></div>`).join('')
+    :'<div style="text-align:center;padding:28px;color:var(--text2)">سجّل نزولات لتظهر الترتيبات 🏆</div>';
+}
+
+// ════ VOLUNTEERS ════
+function renderVols(){
+  const q=(document.getElementById('vol-q')?.value||'').toLowerCase();
+  const list=V.filter(v=>!q||v.name.toLowerCase().includes(q)||(v.school||'').toLowerCase().includes(q)||(v.phone||'').includes(q));
+  const sorted=[...list].sort((a,b)=>vPts(b.id)-vPts(a.id));
+  const isAdmin=currentRole==='admin';
+  const md=['🥇','🥈','🥉'];
+  document.getElementById('vols-tb').innerHTML=sorted.length
+    ?sorted.map((v,i)=>`<tr>
+      <td>${md[i]||i+1}</td>
+      <td><div class="vname" onclick="openProfile('${v.id}')">${v.name}</div><div class="vschool">${v.notes||''}</div></td>
+      <td>${v.school||'—'}</td>
+      <td>${v.phone||'—'}</td>
+      <td><span class="trp-badge">📋 ${vTrips(v.id).length}</span></td>
+      <td>⏱️ ${vHrs(v.id)} س</td>
+      <td><span class="pts-badge">⭐ ${vPts(v.id)}</span></td>
+      ${isAdmin?`<td style="display:flex;gap:5px;flex-wrap:wrap"><button class="btn btn-red btn-sm" onclick="openTripFor('${v.id}')">📝</button><button class="btn btn-outline btn-sm" title="تعديل البوينتس يدوياً" onclick="openEditPts('${v.id}')">⭐</button><button class="btn btn-outline btn-sm" onclick="openProfile('${v.id}')">👁️</button><button class="btn btn-danger btn-sm" onclick="delVol('${v.id}')">🗑️</button></td>`:'<td style="display:none"></td>'}
+    </tr>`).join('')
+    :`<tr class="empty-row"><td colspan="8">👥 ${q?'مفيش نتائج':'لا يوجد متطوعون'}</td></tr>`;
+}
+
+const openAddVol=adminOnly(()=>{
+  ['v-name','v-school','v-phone','v-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('m-vol').classList.add('open');
+  setTimeout(()=>document.getElementById('v-name').focus(),200);
+});
+const saveVol=adminOnly(()=>{
+  const name=document.getElementById('v-name').value.trim();
+  if(!name){toast('⚠️ أدخل الاسم','err');return;}
+  V.push({id:uid(),name,school:document.getElementById('v-school').value.trim(),phone:document.getElementById('v-phone').value.trim(),notes:document.getElementById('v-notes').value.trim()});
+  persist();close_m('m-vol');renderDash();renderVols();
+  toast('✅ تم إضافة '+name,'ok');
+});
+const delVol=adminOnly((id)=>{
+  if(!confirm('هتحذف المتطوع ده وكل نزولاته؟'))return;
+  V=V.filter(v=>v.id!==id);T=T.filter(t=>t.vid!==id);
+  persist();renderVols();renderDash();close_m('m-profile');toast('🗑️ تم الحذف');
+});
+
+// ════ EDIT POINTS ════
+let _editPtsId=null;
+const openEditPts=adminOnly((id)=>{
+  const v=V.find(x=>x.id===id);
+  if(!v)return;
+  _editPtsId=id;
+  const realPts =T.filter(t=>t.vid===id&&!t.manual).reduce((s,t)=>s+t.pts,0);
+  const manualPts=T.filter(t=>t.vid===id&& t.manual).reduce((s,t)=>s+t.pts,0);
+  document.getElementById('ep-name').textContent=v.name;
+  document.getElementById('ep-trip-pts').textContent=realPts;
+  document.getElementById('ep-bonus').value=manualPts;
+  document.getElementById('ep-total').textContent=realPts+manualPts;
+  document.getElementById('m-editpts').classList.add('open');
+  setTimeout(()=>document.getElementById('ep-bonus').focus(),200);
+});
+function epCalcTotal(){
+  const realPts=T.filter(t=>t.vid===_editPtsId&&!t.manual).reduce((s,t)=>s+t.pts,0);
+  const bonus=parseInt(document.getElementById('ep-bonus').value)||0;
+  document.getElementById('ep-total').textContent=realPts+bonus;
+}
+const saveEditPts=adminOnly(()=>{
+  const v=V.find(x=>x.id===_editPtsId);
+  if(!v)return;
+  const bonus=parseInt(document.getElementById('ep-bonus').value)||0;
+  if(bonus<0){toast('⚠️ البوينتس لازم تكون صفر أو أكتر','err');return;}
+  // احذف النزولات اليدوية القديمة لنفس المتطوع
+  T=T.filter(t=>!(t.vid===_editPtsId&&t.manual));
+  // حوّل البوينتس لنزولات حقيقية (كل 4 pts = نزولة 2 ساعة)
+  const fullTrips=Math.floor(bonus/4);
+  const remainder=bonus%4;
+  for(let i=0;i<fullTrips;i++){
+    T.push({id:uid(),vid:_editPtsId,act:'نزولات سابقة',date:TODAY,hrs:2,pts:4,notes:'مضاف يدوياً',manual:true});
+  }
+  if(remainder>0){
+    T.push({id:uid(),vid:_editPtsId,act:'نزولات سابقة',date:TODAY,hrs:0,pts:remainder,notes:'رصيد إضافي يدوي',manual:true});
+  }
+  delete v.bonusPts;
+  const totalTrips=fullTrips+(remainder>0?1:0);
+  persist();close_m('m-editpts');renderVols();renderDash();renderLB();renderTrips();
+  toast('✅ تم تسجيل '+bonus+' pts كـ '+totalTrips+' نزولة لـ '+v.name,'ok');
+});
+
+// ════ SINGLE TRIP ════
+function fillVolSel(selId,qId){
+  const q=(document.getElementById(qId)?.value||'').toLowerCase();
+  const sel=document.getElementById(selId);
+  const f=V.filter(v=>!q||v.name.toLowerCase().includes(q)||(v.school||'').toLowerCase().includes(q));
+  sel.innerHTML=f.map(v=>`<option value="${v.id}">${v.name}${v.school?' ('+v.school+')':''}</option>`).join('');
+}
+function filterTripVolSel(){fillVolSel('t-vol','trip-vol-q');}
+function filterMultiVolSel(){fillVolSel('multi-vol','multi-vol-q');}
+
+const openAddTrip=adminOnly(()=>{
+  if(!V.length){toast('⚠️ أضف متطوعين الأول!','err');return;}
+  selH=0;
+  document.querySelectorAll('#m-trip .hbtn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('trip-vol-q').value='';
+  document.getElementById('t-notes').value='';
+  document.getElementById('t-date').value=TODAY;
+  document.getElementById('pts-p').textContent='—';
+  fillVolSel('t-vol','trip-vol-q');
+  document.getElementById('m-trip').classList.add('open');
+});
+function openTripFor(id){openAddTrip();setTimeout(()=>{const o=document.querySelector(`#t-vol option[value="${id}"]`);if(o)document.getElementById('t-vol').value=id;},120);}
+function pickH(btn,h){selH=h;document.querySelectorAll('#m-trip .hbtn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');document.getElementById('pts-p').textContent=pts(h)+' بوينتس';}
+const saveTrip=adminOnly(()=>{
+  const vid=document.getElementById('t-vol').value;
+  const act=document.getElementById('t-act').value;
+  const date=document.getElementById('t-date').value;
+  const notes=document.getElementById('t-notes').value.trim();
+  if(!vid){toast('⚠️ اختار المتطوع','err');return;}
+  if(!date){toast('⚠️ أدخل التاريخ','err');return;}
+  if(!selH){toast('⚠️ اختار الساعات','err');return;}
+  T.push({id:uid(),vid,act,date,hrs:selH,pts:pts(selH),notes});
+  persist();close_m('m-trip');renderDash();renderTrips();renderVols();
+  toast('✅ نزولة '+V.find(x=>x.id===vid)?.name+' — +'+pts(selH)+' pts','ok');
+});
+
+// ════ BULK ════
+function filterBulk(){
+  const q=(document.getElementById('b-search')?.value||'').toLowerCase();
+  const rows=V.filter(v=>!q||v.name.toLowerCase().includes(q)||(v.school||'').toLowerCase().includes(q))
+    .map(v=>`<div class="bulk-item"><input type="checkbox" class="bulk-cb" id="bv_${v.id}" value="${v.id}"><label for="bv_${v.id}">${v.name}${v.school?' — '+v.school:''}</label></div>`).join('');
+  document.getElementById('b-list').innerHTML=`<div class="sel-all-row"><input type="checkbox" id="sel-all" onchange="toggleAll(this)"><label for="sel-all">تحديد الكل</label></div>`+rows;
+}
+function toggleAll(cb){document.querySelectorAll('.bulk-cb').forEach(i=>i.checked=cb.checked);}
+const openBulk=adminOnly(()=>{
+  if(!V.length){toast('⚠️ أضف متطوعين الأول!','err');return;}
+  bulkH=0;
+  document.querySelectorAll('#m-bulk .hbtn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('b-date').value=TODAY;
+  document.getElementById('b-notes').value='';
+  document.getElementById('b-search').value='';
+  filterBulk();
+  document.getElementById('m-bulk').classList.add('open');
+});
+function pickBH(btn,h){bulkH=h;document.querySelectorAll('#m-bulk .hbtn').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');}
+const saveBulk=adminOnly(()=>{
+  const checked=[...document.querySelectorAll('.bulk-cb:checked')].map(i=>i.value);
+  const act=document.getElementById('b-act').value;
+  const date=document.getElementById('b-date').value;
+  const notes=document.getElementById('b-notes').value.trim();
+  if(!checked.length){toast('⚠️ اختار متطوع على الأقل','err');return;}
+  if(!date){toast('⚠️ أدخل التاريخ','err');return;}
+  if(!bulkH){toast('⚠️ اختار الساعات','err');return;}
+  checked.forEach(vid=>T.push({id:uid(),vid,act,date,hrs:bulkH,pts:pts(bulkH),notes}));
+  persist();close_m('m-bulk');renderDash();renderTrips();renderVols();
+  toast('✅ تم تسجيل نزولة لـ '+checked.length+' متطوع','ok');
+});
+
+// ════ MULTI ════
+const ACTS=['فرز ملابس','فرز أدوية','إطعام','فرحة','زيارة','تحقيق أماني','أخرى'];
+const actOpts=ACTS.map(a=>`<option value="${a}">${a}</option>`).join('');
+const hOpts=[2,3,4,5,6].map(h=>`<option value="${h}">${h} ساعة</option>`).join('');
+
+function addTripRow(){
+  const id='tr_'+uid();
+  const row=document.createElement('div');
+  row.className='mtr';row.id=id;
+  row.innerHTML=`<select class="row-act" onchange="updateMultiTotal()">${actOpts}</select><input class="row-date" type="date" value="${TODAY}" onchange="updateMultiTotal()"><select class="row-hrs" onchange="updateMultiTotal()"><option value="">ساعات</option>${hOpts}</select><input class="row-notes" type="text" placeholder="ملاحظات..."><button class="rm" onclick="document.getElementById('${id}').remove();updateMultiTotal()">✕</button>`;
+  document.getElementById('trip-rows').appendChild(row);
+  updateMultiTotal();
+}
+function updateMultiTotal(){
+  const rows=document.querySelectorAll('#trip-rows .mtr');
+  let total=0;rows.forEach(r=>{const h=parseInt(r.querySelector('.row-hrs').value)||0;total+=pts(h);});
+  document.getElementById('multi-pts-total').innerHTML=`<span style="font-family:'Tajawal',sans-serif;font-weight:900;font-size:22px;color:var(--navy)">${total}</span><span style="font-size:12px;color:var(--text2)"> بوينتس إجمالي لـ ${rows.length} نزولة</span>`;
+}
+const openMulti=adminOnly(()=>{
+  if(!V.length){toast('⚠️ أضف متطوعين الأول!','err');return;}
+  document.getElementById('multi-vol-q').value='';
+  document.getElementById('trip-rows').innerHTML='';
+  fillVolSel('multi-vol','multi-vol-q');
+  addTripRow();
+  document.getElementById('m-multi').classList.add('open');
+});
+const saveMulti=adminOnly(()=>{
+  const vid=document.getElementById('multi-vol').value;
+  if(!vid){toast('⚠️ اختار المتطوع','err');return;}
+  const rows=document.querySelectorAll('#trip-rows .mtr');
+  if(!rows.length){toast('⚠️ أضف نزولة واحدة على الأقل','err');return;}
+  let saved=0;
+  for(const row of rows){
+    const act=row.querySelector('.row-act').value;
+    const date=row.querySelector('.row-date').value;
+    const h=parseInt(row.querySelector('.row-hrs').value)||0;
+    const notes=row.querySelector('.row-notes').value.trim();
+    if(!date||!h){toast('⚠️ كمّل بيانات كل النزولات','err');return;}
+    T.push({id:uid(),vid,act,date,hrs:h,pts:pts(h),notes});saved++;
+  }
+  persist();close_m('m-multi');renderDash();renderTrips();renderVols();
+  toast('✅ تم تسجيل '+saved+' نزولة لـ '+V.find(x=>x.id===vid)?.name,'ok');
+});
+
+// ════ TRIPS ════
+function filterAct(el){curAct=el.dataset.act;document.querySelectorAll('.fchip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderTrips();}
+function renderTrips(){
+  const q=(document.getElementById('trip-q')?.value||'').toLowerCase();
+  let list=curAct==='all'?[...T]:T.filter(t=>t.act===curAct);
+  if(q)list=list.filter(t=>{const v=V.find(x=>x.id===t.vid);return v&&v.name.toLowerCase().includes(q);});
+  list.sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const isAdmin=currentRole==='admin';
+  document.getElementById('trips-list').innerHTML=list.length
+    ?list.map(t=>{const v=V.find(x=>x.id===t.vid);return`<div class="trip-card" data-act="${t.act}">
+      <div><div class="tvol" onclick="openProfile('${t.vid}')">${v?v.name:'محذوف'}</div>
+      <div class="tmeta"><span class="ab ${abCls(t.act)}">${t.act}</span> ⏱️ ${t.hrs} ساعة &nbsp;📅 ${fmt(t.date)}</div>
+      ${t.notes?`<div class="tnotes">📝 ${t.notes}</div>`:''}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="tpts">+${t.pts} pts</div>
+        ${isAdmin?`<button class="btn btn-danger btn-sm" onclick="delTrip('${t.id}')">🗑️</button>`:''}
+      </div></div>`;}).join('')
+    :'<div style="text-align:center;padding:48px;color:var(--text2)">مفيش نزولات هنا 📋</div>';
+}
+const delTrip=adminOnly((id)=>{
+  if(!confirm('هتحذف النزولة دي؟'))return;
+  T=T.filter(t=>t.id!==id);persist();renderTrips();renderDash();renderVols();toast('🗑️ تم الحذف');
+});
+
+// ════ LEADERBOARD ════
+function renderLB(){
+  const q=(document.getElementById('lb-q')?.value||'').toLowerCase();
+  let sorted=[...V].map(v=>({...v,p:vPts(v.id),n:vTrips(v.id).length,h:vHrs(v.id)})).sort((a,b)=>b.p-a.p);
+  if(q)sorted=sorted.filter(v=>v.name.toLowerCase().includes(q)||(v.school||'').toLowerCase().includes(q));
+  const mx=sorted[0]?.p||1;const md=['🥇','🥈','🥉'];
+  document.getElementById('lb-list').innerHTML=sorted.length
+    ?sorted.map((v,i)=>`<div class="lb-item"><div class="lb-rank">${md[i]||i+1}</div><div style="flex:1"><div class="lb-name" onclick="openProfile('${v.id}')">${v.name}</div><div class="lb-sub">${v.school||'—'} | ${v.n} نزولة | ${v.h} ساعة</div><div class="lb-bar-bg"><div class="lb-bar" style="width:${v.p?Math.round(v.p/mx*100):0}%"></div></div></div><div class="lb-pts">${v.p}</div></div>`).join('')
+    :'<div style="text-align:center;padding:56px;color:var(--text2)">أضف متطوعين وسجّل نزولات 🏆</div>';
+}
+
+// ════ PROFILE ════
+function openProfile(vid){
+  const v=V.find(x=>x.id===vid);if(!v)return;
+  document.getElementById('vp-name').textContent=v.name;
+  document.getElementById('vp-sub').textContent=(v.school||'—')+' | '+(v.phone||'—');
+  document.getElementById('vp-pts').textContent=vPts(vid);
+  document.getElementById('vp-trps').textContent=vTrips(vid).length;
+  document.getElementById('vp-hrs').textContent=vHrs(vid);
+  document.getElementById('vp-del-btn').onclick=()=>delVol(vid);
+  const trips=[...vTrips(vid)].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const isAdmin=currentRole==='admin';
+  document.getElementById('vp-trips').innerHTML=trips.length
+    ?trips.map(t=>`<div class="trip-card" data-act="${t.act}" style="margin-bottom:7px">
+      <div><div class="tmeta"><span class="ab ${abCls(t.act)}">${t.act}</span> ⏱️ ${t.hrs} ساعة &nbsp;📅 ${fmt(t.date)}</div>
+      ${t.notes?`<div class="tnotes">📝 ${t.notes}</div>`:''}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        <div class="tpts">+${t.pts} pts</div>
+        ${isAdmin?`<button class="btn btn-danger btn-sm" onclick="delTrip('${t.id}');openProfile('${vid}')">🗑️</button>`:''}
+      </div></div>`).join('')
+    :'<div style="text-align:center;padding:24px;color:var(--text2)">مفيش نزولات مسجلة</div>';
+  document.getElementById('m-profile').classList.add('open');
+}
+
+// ════ EXPORT ════
+const exportExcel=adminOnly(()=>{
+  if(!V.length){toast('⚠️ مفيش بيانات','err');return;}
+  const BOM='\uFEFF';
+  const h1=['الترتيب','الاسم','المدرسة / الفرع','رقم الهاتف','عدد النزولات','إجمالي الساعات','إجمالي البوينتس','ملاحظات'];
+  const sorted=[...V].map(v=>({...v,p:vPts(v.id),n:vTrips(v.id).length,h:vHrs(v.id)})).sort((a,b)=>b.p-a.p);
+  const r1=sorted.map((v,i)=>[i+1,v.name,v.school||'',v.phone||'',v.n,v.h,v.p,v.notes||'']);
+  const h2=['اسم المتطوع','المدرسة','النشاط','التاريخ','الساعات','البوينتس','ملاحظات'];
+  const r2=[...T].sort((a,b)=>new Date(b.date)-new Date(a.date)).map(t=>{const v=V.find(x=>x.id===t.vid);return[v?v.name:'محذوف',v?v.school||'':'',t.act,t.date,t.hrs,t.pts,t.notes||''];});
+  const toCSV=rows=>rows.map(row=>row.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  dlFile(BOM+toCSV([h1,...r1]),'resala-متطوعين.csv','text/csv;charset=utf-8;');
+  setTimeout(()=>dlFile(BOM+toCSV([h2,...r2]),'resala-نزولات.csv','text/csv;charset=utf-8;'),700);
+  toast('✅ تم تصدير Excel','ok');
+});
+function dlFile(content,filename,type){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([content],{type}));
+  a.download=filename;a.click();URL.revokeObjectURL(a.href);
+}
+
+// ════ MODAL UTILS ════
+function close_m(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.overlay.open').forEach(o=>o.classList.remove('open'));});
+
+// ════ AI CHATBOT ════
+const AI_SYSTEM = `أنت مساعد ذكي لجمعية رسالة فرع STEM. اسمك "مساعد رسالة STEM".
+مهمتك: مساعدة المتطوعين والمهتمين بالتطوع في رسالة STEM.
+معلومات عن رسالة STEM:
+- رسالة STEM هي مجموعة تطوعية من طلاب مدارس STEM في مصر
+- الأنشطة تشمل: فرز ملابس، فرز أدوية، إطعام، فرحة، زيارات، تحقيق أماني
+- كل نزولة ساعتين أو أكتر = 4 بوينتس
+- البوينتس بتعكس نشاط المتطوع
+رد بالعربي دايماً، كن ودوداً وقصيراً في ردودك (3-4 جمل بحد أقصى).`;
+
+let aiHistory = [];
+
+async function sendAiMsg(){
+  const input = document.getElementById('ai-input');
+  const msg = input.value.trim();
+  if(!msg) return;
+  input.value = '';
+
+  // Add user bubble
+  appendAiBubble(msg, 'user');
+  aiHistory.push({role:'user', content: msg});
+
+  // Show typing
+  document.getElementById('ai-typing').style.display = 'block';
+  scrollAiToBottom();
+
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:500,
+        system: AI_SYSTEM,
+        messages: aiHistory
+      })
+    });
+    const data = await res.json();
+    const reply = data.content?.map(b=>b.text||'').join('') || '❌ مفيش رد من السيرفر';
+    aiHistory.push({role:'assistant', content: reply});
+    document.getElementById('ai-typing').style.display = 'none';
+    appendAiBubble(reply, 'bot');
+  } catch(e){
+    document.getElementById('ai-typing').style.display = 'none';
+    appendAiBubble('⚠️ حصل خطأ — تأكد من الإنترنت وحاول تاني', 'bot');
+  }
+}
+
+function appendAiBubble(text, who){
+  const msgs = document.getElementById('ai-msgs');
+  const div = document.createElement('div');
+  div.className = `ai-bubble ai-${who}`;
+  div.innerHTML = `<div class="ai-avatar">${who==='bot'?'🤖':'👤'}</div><div class="ai-text">${text.replace(/\n/g,'<br>')}</div>`;
+  msgs.appendChild(div);
+  scrollAiToBottom();
+}
+
+function scrollAiToBottom(){
+  const msgs = document.getElementById('ai-msgs');
+  if(msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+function copyEmbedCode(){
+  const url = window.location.href.replace(/#.*/,'')+'#ai';
+  const code = `<iframe src="${url}" width="400" height="600" style="border:none;border-radius:16px;box-shadow:0 4px 24px rgba(0,0,0,.15)" allow="clipboard-write"></iframe>`;
+  navigator.clipboard.writeText(code).then(()=>toast('✅ تم نسخ كود التضمين','ok')).catch(()=>toast('❌ مش قادر ينسخ تلقائياً — انسخ الكود يدوياً','err'));
+}
+
+// ════ MOBILE NAV SYNC ════
+function setMnav(page){
+  document.querySelectorAll('.mnav-btn').forEach(b=>b.classList.remove('active'));
+  const btn=document.getElementById('mnav-'+page);
+  if(btn)btn.classList.add('active');
+}
+// Patch showPage to also sync mobile nav
+const _origShowPage=showPage;
+showPage=function(page,el){
+  _origShowPage(page,el);
+  setMnav(page);
+};
+
+// ════ INIT ════
+// Auto-login if session still active
+(()=>{
+  const role=sessionStorage.getItem('rs_role');
+  const user=sessionStorage.getItem('rs_user');
+  if(role&&user){ currentRole=role; currentUser=user; bootApp(); }
+})();
+</script>
+</body>
+</html>
